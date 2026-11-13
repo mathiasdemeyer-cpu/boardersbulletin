@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Silvretta Powder Radar — Ischgl &amp; Samnaun</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #f8fafc;
+      color: #0f172a;
+    }
+    .card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    }
+    .tab-active {
+      background-color: #0f172a;
+      color: #ffffff;
+    }
+    .tab-inactive {
+      background-color: #f1f5f9;
+      color: #475569;
+    }
+    .tab-inactive:hover {
+      background-color: #e2e8f0;
+    }
+  </style>
+</head>
+<body class="min-h-screen antialiased">
+
+  <!-- Header -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-20">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div>
+        <div class="flex items-center gap-2.5">
+          <h1 class="text-xl font-bold tracking-tight text-slate-900">Silvretta Powder Radar</h1>
+          <span class="text-xs font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">Ischgl &amp; Samnaun</span>
+        </div>
+        <p class="text-xs text-slate-500 mt-0.5">Sneeuwdek, berg- &amp; dalmodellen en dagelijkse 20:00 WhatsApp-briefing</p>
+      </div>
+      <div class="flex items-center gap-2.5">
+        <span id="dataStatusBadge" class="text-xs font-medium px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+          Gegevens laden...
+        </span>
+        <button onclick="loadAllWeatherData()" class="text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 transition">
+          Vernieuwen
+        </button>
+        <button onclick="toggleModal(true)" class="text-xs font-medium px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white transition">
+          20:00 WhatsApp Setup
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+
+    <!-- Sectie 1: Huidige Sneeuwsituatie -->
+    <section class="card p-5 sm:p-6">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-5">
+        <div>
+          <h2 class="text-base font-semibold text-slate-900">Huidige Sneeuwsituatie</h2>
+          <p class="text-xs text-slate-500">Actueel sneeuwdek (cm), temperatuur en verse sneeuw op vier hoogteniveaus</p>
+        </div>
+        <span id="lastUpdatedText" class="text-xs text-slate-400">Bijgewerkt: —</span>
+      </div>
+
+      <!-- 4 Hoogtekaarten -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 mb-6">
+        <div class="p-4 rounded-xl bg-slate-50 border border-slate-200/80">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Greitspitz (Top)</span>
+            <span class="text-xs font-medium text-slate-500">2.872 m</span>
+          </div>
+          <div class="mt-2 flex items-baseline gap-2">
+            <span id="snowDepthTop" class="text-2xl font-bold text-slate-900">— cm</span>
+            <span id="tempTop" class="text-sm font-medium text-sky-700">—°C</span>
+          </div>
+          <p id="freshTop" class="text-xs text-slate-500 mt-1">24u nieuw: — cm · 72u: — cm</p>
+        </div>
+
+        <div class="p-4 rounded-xl bg-slate-50 border border-slate-200/80">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Idalp (Midden)</span>
+            <span class="text-xs font-medium text-slate-500">2.320 m</span>
+          </div>
+          <div class="mt-2 flex items-baseline gap-2">
+            <span id="snowDepthMid" class="text-2xl font-bold text-slate-900">— cm</span>
+            <span id="tempMid" class="text-sm font-medium text-sky-700">—°C</span>
+          </div>
+          <p id="freshMid" class="text-xs text-slate-500 mt-1">24u nieuw: — cm · 72u: — cm</p>
+        </div>
+
+        <div class="p-4 rounded-xl bg-slate-50 border border-slate-200/80">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Samnaun Dorp</span>
+            <span class="text-xs font-medium text-slate-500">1.846 m</span>
+          </div>
+          <div class="mt-2 flex items-baseline gap-2">
+            <span id="snowDepthSamnaun" class="text-2xl font-bold text-slate-900">— cm</span>
+            <span id="tempSamnaun" class="text-sm font-medium text-sky-700">—°C</span>
+          </div>
+          <p id="freshSamnaun" class="text-xs text-slate-500 mt-1">24u nieuw: — cm · 72u: — cm</p>
+        </div>
+
+        <div class="p-4 rounded-xl bg-slate-50 border border-slate-200/80">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Ischgl Dorp</span>
+            <span class="text-xs font-medium text-slate-500">1.377 m</span>
+          </div>
+          <div class="mt-2 flex items-baseline gap-2">
+            <span id="snowDepthIschgl" class="text-2xl font-bold text-slate-900">— cm</span>
+            <span id="tempIschgl" class="text-sm font-medium text-sky-700">—°C</span>
+          </div>
+          <p id="freshIschgl" class="text-xs text-slate-500 mt-1">24u nieuw: — cm · 72u: — cm</p>
+        </div>
+      </div>
+
+      <!-- Sneeuwdek Grafiek (Afgelopen 7 dagen + 3 dagen vooruit) -->
+      <div>
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-500">Verloop Sneeuwdek (7 dagen historie + 3 dagen verwachting)</h3>
+          <span class="text-xs text-slate-400">Eenheid: cm</span>
+        </div>
+        <div class="h-64 w-full">
+          <canvas id="snowDepthChart"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- Sectie 2: Weermodellen Vergelijking (Komende 72 uur) -->
+    <section class="card p-5 sm:p-6">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+        <div>
+          <h2 class="text-base font-semibold text-slate-900">Lokale &amp; Regionale Weermodellen (72 uur)</h2>
+          <p class="text-xs text-slate-500">Vergelijking van verse sneeuwval, temperatuur op top/vallei en gemiddelde sneeuwgrens</p>
+        </div>
+        <div class="flex items-center gap-1.5 text-xs">
+          <span class="px-2.5 py-1 rounded-md bg-slate-100 text-slate-700 font-medium">Consensus 72u berg: <strong id="consensusSnow">— cm</strong></span>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse text-sm">
+          <thead>
+            <tr class="border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500">
+              <th class="py-2.5 pr-4 font-semibold">Weermodel</th>
+              <th class="py-2.5 px-3 font-semibold">Resolutie</th>
+              <th class="py-2.5 px-3 font-semibold">Sneeuw 24u (Berg)</th>
+              <th class="py-2.5 px-3 font-semibold">Sneeuw 72u (Berg)</th>
+              <th class="py-2.5 px-3 font-semibold">Sneeuw 72u (Ischgl/Samnaun)</th>
+              <th class="py-2.5 px-3 font-semibold">Temp Berg (Min/Max)</th>
+              <th class="py-2.5 px-3 font-semibold">Temp Dal (Ischgl)</th>
+              <th class="py-2.5 pl-3 font-semibold">Sneeuwgrens</th>
+            </tr>
+          </thead>
+          <tbody id="modelsTableBody" class="divide-y divide-slate-100 text-slate-700">
+            <tr>
+              <td colspan="8" class="py-6 text-center text-xs text-slate-400">Modelruns worden opgehaald...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Sectie 3: Interactieve 72-uurs Modelgrafiek -->
+    <section class="card p-5 sm:p-6">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+        <div>
+          <h2 class="text-base font-semibold text-slate-900">72-uurs Detailverloop per Model</h2>
+          <p class="text-xs text-slate-500">Bekijk de uurlijkse spreiding tussen ICON, ECMWF IFS en Météo-France / AROME</p>
+        </div>
+        <div class="inline-flex rounded-lg p-1 bg-slate-100 gap-1">
+          <button id="btnChartSnow" onclick="switchForecastChart('snow')" class="tab-active text-xs font-medium px-3 py-1.5 rounded-md transition">
+            Sneeuwval (cm/3u)
+          </button>
+          <button id="btnChartSnowline" onclick="switchForecastChart('snowline')" class="tab-inactive text-xs font-medium px-3 py-1.5 rounded-md transition">
+            Sneeuwgrens (m)
+          </button>
+          <button id="btnChartTemp" onclick="switchForecastChart('temp')" class="tab-inactive text-xs font-medium px-3 py-1.5 rounded-md transition">
+            Temp Berg vs. Dal
+          </button>
+        </div>
+      </div>
+      <div class="h-72 w-full">
+        <canvas id="forecastDetailChart"></canvas>
+      </div>
+    </section>
+
+    <!-- Sectie 4: Dagelijkse 20:00 WhatsApp Briefing -->
+    <section class="card p-5 sm:p-6">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+        <div>
+          <h2 class="text-base font-semibold text-slate-900">Avond-update voor WhatsApp-kanaal (20:00)</h2>
+          <p class="text-xs text-slate-500">Kant-en-klaar geformatteerd voor WhatsApp (*vet* en _cursief_) voor Mathias &amp; Wouter</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <button onclick="copyWhatsAppMessage()" id="copyBtn" class="text-xs font-medium px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition">
+            Kopieer voor WhatsApp-kanaal
+          </button>
+          <a id="openWhatsAppLink" href="#" target="_blank" rel="noopener" class="text-xs font-medium px-3.5 py-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 transition">
+            Open in WhatsApp
+          </a>
+        </div>
+      </div>
+      <textarea id="whatsappPreview" rows="13" readonly class="w-full p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm font-mono text-slate-800 leading-relaxed focus:outline-none"></textarea>
+    </section>
+
+  </main>
+
+  <!-- Modal: Automatische 20:00 WhatsApp & Kanaal Setup -->
+  <div id="setupModal" class="fixed inset-0 bg-slate-900/50 hidden items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-xl border border-slate-200 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-200">
+        <h3 class="text-base font-bold text-slate-900">Automatische 20:00 WhatsApp-kanaal Bot</h3>
+        <button onclick="toggleModal(false)" class="text-slate-400 hover:text-slate-600 text-lg font-bold px-2">&times;</button>
+      </div>
+      <div class="mt-4 space-y-4 text-xs sm:text-sm text-slate-600">
+        <p>
+          Met onderstaand Python-script en een gratis <strong>GitHub Actions</strong> schema ontvang je elke avond om <strong>20:00 uur</strong> automatisch deze update in jullie WhatsApp-kanaal (via <em>Whapi.Cloud</em>) of rechtstreeks op je eigen WhatsApp (via <em>CallMeBot</em>).
+        </p>
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <span class="font-semibold text-slate-800">1. update_ischgl_whatsapp.py</span>
+            <button onclick="copyPythonCode()" class="text-xs text-sky-700 hover:underline font-medium">Kopieer script</button>
+          </div>
+          <pre id="pythonCodeBlock" class="p-3.5 rounded-xl bg-slate-900 text-slate-100 text-xs overflow-x-auto leading-relaxed">import os
+import requests
+from datetime import datetime
+
+# Coördinaten Silvretta Arena
+LOCS = {
+    "ischgl": {"lat": 47.0131, "lon": 10.2914, "elev": 1377},
+    "samnaun": {"lat": 46.9442, "lon": 10.3614, "elev": 1846},
+    "berg": {"lat": 46.9739, "lon": 10.3208, "elev": 2872},
+}
+
+def fetch_forecast():
+    url = "https://api.open-meteo.com/v1/forecast"
+    params = {
+        "latitude": [LOCS["ischgl"]["lat"], LOCS["samnaun"]["lat"], LOCS["berg"]["lat"]],
+        "longitude": [LOCS["ischgl"]["lon"], LOCS["samnaun"]["lon"], LOCS["berg"]["lon"]],
+        "elevation": [1377, 1846, 2872],
+        "current": ["temperature_2m", "snow_depth"],
+        "hourly": ["temperature_2m", "snowfall", "freezing_level_height"],
+        "models": "best_match,icon_seamless,ecmwf_ifs025",
+        "forecast_days": 3,
+        "timezone": "Europe/Vienna"
+    }
+    r = requests.get(url, params=params, timeout=20)
+    r.raise_for_status()
+    return r.json()
+
+def build_message(data):
+    ischgl, samnaun, berg = data[0], data[1], data[2]
+    now_str = datetime.now().strftime("%d/%m/%Y")
+
+    depth_berg = round((berg["current"].get("snow_depth") or 0) * 100)
+    depth_sam = round((samnaun["current"].get("snow_depth") or 0) * 100)
+    depth_isc = round((ischgl["current"].get("snow_depth") or 0) * 100)
+
+    snow_24_berg = round(sum((berg["hourly"].get("snowfall_icon_seamless") or [0])[:24]), 1)
+    snow_72_berg = round(sum((berg["hourly"].get("snowfall_icon_seamless") or [0])[:72]), 1)
+    snow_72_ecmwf = round(sum((berg["hourly"].get("snowfall_ecmwf_ifs025") or [0])[:72]), 1)
+
+    temps_berg = (berg["hourly"].get("temperature_2m_icon_seamless") or [0])[:24]
+    temps_dal = (ischgl["hourly"].get("temperature_2m_icon_seamless") or [0])[:24]
+    flh = (berg["hourly"].get("freezing_level_height_icon_seamless") or [1500])[:24]
+    snowline = max(800, round(sum(flh) / len(flh) - 250))
+
+    return (
+        f"🏔️ *Silvretta Powder Radar — {now_str} (20:00)*\n"
+        f"_Ischgl & Samnaun Update voor Mathias & Wouter_\n\n"
+        f"❄️ *Huidig Sneeuwdek*\n"
+        f"• Greitspitz (2.872m): *{depth_berg} cm* ({berg['current']['temperature_2m']}°C)\n"
+        f"• Samnaun (1.846m): *{depth_sam} cm* ({samnaun['current']['temperature_2m']}°C)\n"
+        f"• Ischgl (1.377m): *{depth_isc} cm* ({ischgl['current']['temperature_2m']}°C)\n\n"
+        f"🌨️ *Verwachte Sneeuwval (Berg)*\n"
+        f"• Komende 24u (ICON): *{snow_24_berg} cm*\n"
+        f"• Komende 72u: *{snow_72_berg} cm* (ICON) / *{snow_72_ecmwf} cm* (ECMWF)\n\n"
+        f"🌡️ *Temperatuur & Sneeuwgrens (24u)*\n"
+        f"• Berg (2.872m): {min(temps_berg):.1f}°C tot {max(temps_berg):.1f}°C\n"
+        f"• Vallei Ischgl (1.377m): {min(temps_dal):.1f}°C tot {max(temps_dal):.1f}°C\n"
+        f"• Gem. sneeuwgrens: *~{snowline} m*"
+    )
+
+def send_whatsapp_channel(msg):
+    # Optie A: WhatsApp Kanaal via Whapi.Cloud (NL-... @newsletter)
+    whapi_token = os.getenv("WHAPI_TOKEN")
+    channel_id = os.getenv("WHATSAPP_CHANNEL_ID")
+    if whapi_token and channel_id:
+        requests.post(
+            "https://gate.whapi.cloud/messages/text",
+            headers={"Authorization": f"Bearer {whapi_token}"},
+            json={"to": channel_id, "body": msg},
+            timeout=15
+        )
+        return
+
+    # Optie B: Persoonlijk WhatsApp-bericht via CallMeBot
+    phone = os.getenv("CALLMEBOT_PHONE")
+    apikey = os.getenv("CALLMEBOT_APIKEY")
+    if phone and apikey:
+        requests.get(
+            "https://api.callmebot.com/whatsapp.php",
+            params={"phone": phone, "text": msg, "apikey": apikey},
+            timeout=15
+        )
+
+if __name__ == "__main__":
+    forecast = fetch_forecast()
+    message = build_message(forecast)
+    print(message)
+    send_whatsapp_channel(message)</pre>
+        </div>
+
+        <div>
+          <span class="font-semibold text-slate-800 block mb-1">2. GitHub Actions (.github/workflows/snow-update.yml)</span>
+          <pre class="p-3.5 rounded-xl bg-slate-100 text-slate-800 text-xs overflow-x-auto leading-relaxed">name: Silvretta 20:00 WhatsApp Update
+on:
+  schedule:
+    - cron: '0 19 * * *' # 19:00 UTC = 20:00 CET (Brussel/Ischgl)
+  workflow_dispatch:
+
+jobs:
+  send-update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests
+      - env:
+          WHAPI_TOKEN: ${{ secrets.WHAPI_TOKEN }}
+          WHATSAPP_CHANNEL_ID: ${{ secrets.WHATSAPP_CHANNEL_ID }}
+          CALLMEBOT_PHONE: ${{ secrets.CALLMEBOT_PHONE }}
+          CALLMEBOT_APIKEY: ${{ secrets.CALLMEBOT_APIKEY }}
+        run: python update_ischgl_whatsapp.py</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Coördinaten voor Ischgl, Samnaun, Idalp en Greitspitz
+    const LOCATIONS = [
+      { id: 'ischgl', name: 'Ischgl Dorp', lat: 47.0131, lon: 10.2914, elev: 1377 },
+      { id: 'samnaun', name: 'Samnaun Dorp', lat: 46.9442, lon: 10.3614, elev: 1846 },
+      { id: 'idalp', name: 'Idalp Midden', lat: 46.9856, lon: 10.3164, elev: 2320 },
+      { id: 'top', name: 'Greitspitz Top', lat: 46.9739, lon: 10.3208, elev: 2872 }
+    ];
+
+    let snowDepthChartInstance = null;
+    let forecastChartInstance = null;
+    let activeForecastTab = 'snow';
+    let globalForecastState = null;
+
+    function toggleModal(show) {
+      const modal = document.getElementById('setupModal');
+      if (show) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+      } else {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+      }
+    }
+
+    function setStatusBadge(isLive) {
+      const badge = document.getElementById('dataStatusBadge');
+      if (isLive) {
+        badge.textContent = 'Live Open-Meteo Data';
+        badge.className = 'text-xs font-medium px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200';
+      } else {
+        badge.textContent = 'Offline Demo-dataset';
+        badge.className = 'text-xs font-medium px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200';
+      }
+    }
+
+    async function loadAllWeatherData() {
+      const badge = document.getElementById('dataStatusBadge');
+      badge.textContent = 'Gegevens laden...';
+      badge.className = 'text-xs font-medium px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 border border-slate-200';
+
+      try {
+        const lats = LOCATIONS.map(l => l.lat).join(',');
+        const lons = LOCATIONS.map(l => l.lon).join(',');
+        const elevs = LOCATIONS.map(l => l.elev).join(',');
+
+        // 1. Huidige sneeuwsituatie + 7 dagen historie + 3 dagen vooruit (standaard best_match)
+        const historyUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lons}&elevation=${elevs}&current=temperature_2m,snow_depth&hourly=snow_depth,snowfall&past_days=7&forecast_days=3&timezone=Europe%2FVienna`;
+
+        // 2. Multi-model vergelijking voor Ischgl (index 0), Samnaun (index 1) en Greitspitz Top (index 2)
+        const modelLats = `${LOCATIONS[0].lat},${LOCATIONS[1].lat},${LOCATIONS[3].lat}`;
+        const modelLons = `${LOCATIONS[0].lon},${LOCATIONS[1].lon},${LOCATIONS[3].lon}`;
+        const modelElevs = `${LOCATIONS[0].elev},${LOCATIONS[1].elev},${LOCATIONS[3].elev}`;
+        const modelsUrl = `https://api.open-meteo.com/v1/forecast?latitude=${modelLats}&longitude=${modelLons}&elevation=${modelElevs}&hourly=temperature_2m,snowfall,freezing_level_height&models=icon_seamless,ecmwf_ifs025,meteofrance_seamless&forecast_days=3&timezone=Europe%2FVienna`;
+
+        const [histRes, modRes] = await Promise.all([
+          fetch(historyUrl),
+          fetch(modelsUrl)
+        ]);
+
+        if (!histRes.ok || !modRes.ok) {
+          throw new Error('API response niet OK');
+        }
+
+        const histData = await histRes.json();
+        const modData = await modRes.json();
+
+        processLiveData(histData, modData);
+        setStatusBadge(true);
+      } catch (err) {
+        console.warn('Fout bij ophalen Open-Meteo data, schakel over naar fallback:', err);
+        processFallbackData();
+        setStatusBadge(false);
+      }
+
+      const now = new Date();
+      document.getElementById('lastUpdatedText').textContent =
+        `Bijgewerkt: ${now.toLocaleDateString('nl-BE')} ${now.toLocaleTimeString('nl-BE', { hour: '2-digit', minute: '2-digit' })}`;
+    }
+
+    function sumSlice(arr, start, end) {
+      if (!Array.isArray(arr)) return 0;
+      let total = 0;
+      for (let i = start; i < Math.min(end, arr.length); i++) {
+        total += (arr[i] || 0);
+      }
+      return Math.round(total * 10) / 10;
+    }
+
+    function processLiveData(histData, modData) {
+      // Huidige kaarten invullen
+      const mapIdx = { ischgl: 0, samnaun: 1, idalp: 2, top: 3 };
+      const currentSummary = {};
+
+      Object.entries(mapIdx).forEach(([key, idx]) => {
+        const locObj = histData[idx];
+        const depthCm = Math.round((locObj.current?.snow_depth || 0) * 100);
+        const tempC = (locObj.current?.temperature_2m ?? 0).toFixed(1);
+        // past_days=7 -> uur 168 is nu
+        const fresh24 = sumSlice(locObj.hourly?.snowfall, 144, 168);
+        const fresh72 = sumSlice(locObj.hourly?.snowfall, 96, 168);
+
+        currentSummary[key] = { depthCm, tempC, fresh24, fresh72 };
+      });
+
+      updateSnowCardsUI(currentSummary);
+
+      // Dagelijkse sneeuwdekreeks (1 waarde per dag om 12:00 over 10 dagen)
+      const hourlyTimes = histData[0].hourly.time;
+      const dailyLabels = [];
+      const depthSeries = { top: [], idalp: [], samnaun: [], ischgl: [] };
+
+      for (let i = 12; i < hourlyTimes.length; i += 24) {
+        const d = new Date(hourlyTimes[i]);
+        dailyLabels.push(d.toLocaleDateString('nl-BE', { day: '2-digit', month: '2-digit' }));
+        depthSeries.ischgl.push(Math.round((histData[0].hourly.snow_depth[i] || 0) * 100));
+        depthSeries.samnaun.push(Math.round((histData[1].hourly.snow_depth[i] || 0) * 100));
+        depthSeries.idalp.push(Math.round((histData[2].hourly.snow_depth[i] || 0) * 100));
+        depthSeries.top.push(Math.round((histData[3].hourly.snow_depth[i] || 0) * 100));
+      }
+
+      renderSnowDepthChart(dailyLabels, depthSeries);
+
+      // Multi-model verwerking (modData: 0 = Ischgl, 1 = Samnaun, 2 = Greitspitz Top)
+      const ischglMod = modData[0].hourly;
+      const samnaunMod = modData[1].hourly;
+      const topMod = modData[2].hourly;
+
+      const modelsConfig = [
+        { key: 'icon_seamless', name: 'DWD ICON (D2/EU)', res: '2.2 - 7 km', color: '#0284c7' },
+        { key: 'ecmwf_ifs025', name: 'ECMWF IFS HRES', res: '9 km', color: '#0f172a' },
+        { key: 'meteofrance_seamless', name: 'Météo-France / AROME', res: '1.5 - 2.5 km', color: '#059669' }
+      ];
+
+      const modelRows = modelsConfig.map(m => {
+        const sTopArr = topMod[`snowfall_${m.key}`] || [];
+        const sIscArr = ischglMod[`snowfall_${m.key}`] || [];
+        const sSamArr = samnaunMod[`snowfall_${m.key}`] || [];
+        const tTopArr = topMod[`temperature_2m_${m.key}`] || [];
+        const tIscArr = ischglMod[`temperature_2m_${m.key}`] || [];
+        const flhArr = topMod[`freezing_level_height_${m.key}`] || [];
+
+        const validTTop = tTopArr.filter(v => v !== null);
+        const validTIsc = tIscArr.filter(v => v !== null);
+        const validFlh = flhArr.filter(v => v !== null);
+
+        const avgFlh = validFlh.length ? validFlh.reduce((a, b) => a + b, 0) / validFlh.length : 1800;
+        const estSnowline = Math.max(800, Math.round(avgFlh - 250));
+
+        return {
+          ...m,
+          snow24Top: sumSlice(sTopArr, 0, 24),
+          snow72Top: sumSlice(sTopArr, 0, 72),
+          snow72Ischgl: sumSlice(sIscArr, 0, 72),
+          snow72Samnaun: sumSlice(sSamArr, 0, 72),
+          minTop: validTTop.length ? Math.min(...validTTop).toFixed(1) : '—',
+          maxTop: validTTop.length ? Math.max(...validTTop).toFixed(1) : '—',
+          minDal: validTIsc.length ? Math.min(...validTIsc).toFixed(1) : '—',
+          maxDal: validTIsc.length ? Math.max(...validTIsc).toFixed(1) : '—',
+          snowline: estSnowline,
+          hourlySnow: sTopArr,
+          hourlySnowline: flhArr.map(v => v ? Math.max(700, Math.round(v - 250)) : null),
+          hourlyTempTop: tTopArr,
+          hourlyTempDal: tIscArr
+        };
+      });
+
+      globalForecastState = {
+        times: topMod.time,
+        models: modelRows,
+        current: currentSummary
+      };
+
+      renderModelsTable(modelRows);
+      renderForecastDetailChart();
+      generateWhatsAppBriefing(currentSummary, modelRows);
+    }
+
+    function processFallbackData() {
+      const currentSummary = {
+        top: { depthCm: 145, tempC: '-6.4', fresh24: 12.5, fresh72: 28.0 },
+        idalp: { depthCm: 105, tempC: '-3.1', fresh24: 9.0, fresh72: 21.5 },
+        samnaun: { depthCm: 62, tempC: '-0.8', fresh24: 5.5, fresh72: 14.0 },
+        ischgl: { depthCm: 38, tempC: '1.4', fresh24: 2.0, fresh72: 7.5 }
+      };
+      updateSnowCardsUI(currentSummary);
+
+      const labels = [];
+      for (let d = -7; d <= 2; d++) {
+        const dt = new Date();
+        dt.setDate(dt.getDate() + d);
+        labels.push(dt.toLocaleDateString('nl-BE', { day: '2-digit', month: '2-digit' }));
+      }
+      renderSnowDepthChart(labels, {
+        top: [118, 120, 125, 132, 131, 138, 145, 154, 162, 168],
+        idalp: [84, 86, 90, 95, 94, 99, 105, 112, 118, 122],
+        samnaun: [48, 49, 52, 56, 55, 58, 62, 66, 70, 72],
+        ischgl: [30, 31, 33, 36, 35, 36, 38, 40, 42, 43]
+      });
+
+      const times = [];
+      for (let h = 0; h < 72; h++) {
+        const dt = new Date();
+        dt.setHours(dt.getHours() + h, 0, 0, 0);
+        times.push(dt.toISOString());
+      }
+
+      const makeWave = (base, amp) => times.map((_, i) => Math.max(0, Math.round((base + Math.sin(i / 5) * amp) * 10) / 10));
+
+      const modelRows = [
+        {
+          key: 'icon_seamless', name: 'DWD ICON (D2/EU)', res: '2.2 - 7 km', color: '#0284c7',
+          snow24Top: 11.5, snow72Top: 24.5, snow72Ischgl: 6.5, snow72Samnaun: 13.0,
+          minTop: '-9.2', maxTop: '-4.1', minDal: '-2.4', maxDal: '2.8', snowline: 1480,
+          hourlySnow: makeWave(0.35, 0.35),
+          hourlySnowline: times.map((_, i) => Math.round(1480 + Math.cos(i / 6) * 180)),
+          hourlyTempTop: times.map((_, i) => Math.round((-6.5 + Math.sin(i / 4) * 2.3) * 10) / 10),
+          hourlyTempDal: times.map((_, i) => Math.round((0.4 + Math.sin(i / 4) * 2.4) * 10) / 10)
+        },
+        {
+          key: 'ecmwf_ifs025', name: 'ECMWF IFS HRES', res: '9 km', color: '#0f172a',
+          snow24Top: 9.0, snow72Top: 21.0, snow72Ischgl: 5.0, snow72Samnaun: 11.5,
+          minTop: '-8.8', maxTop: '-3.8', minDal: '-2.0', maxDal: '3.1', snowline: 1540,
+          hourlySnow: makeWave(0.28, 0.28),
+          hourlySnowline: times.map((_, i) => Math.round(1540 + Math.cos(i / 6) * 160)),
+          hourlyTempTop: times.map((_, i) => Math.round((-6.1 + Math.sin(i / 4) * 2.1) * 10) / 10),
+          hourlyTempDal: times.map((_, i) => Math.round((0.8 + Math.sin(i / 4) * 2.2) * 10) / 10)
+        },
+        {
+          key: 'meteofrance_seamless', name: 'Météo-France / AROME', res: '1.5 - 2.5 km', color: '#059669',
+          snow24Top: 13.0, snow72Top: 26.5, snow72Ischgl: 8.0, snow72Samnaun: 15.0,
+          minTop: '-9.6', maxTop: '-4.5', minDal: '-2.9', maxDal: '2.3', snowline: 1420,
+          hourlySnow: makeWave(0.4, 0.38),
+          hourlySnowline: times.map((_, i) => Math.round(1420 + Math.cos(i / 6) * 190)),
+          hourlyTempTop: times.map((_, i) => Math.round((-6.9 + Math.sin(i / 4) * 2.2) * 10) / 10),
+          hourlyTempDal: times.map((_, i) => Math.round((-0.1 + Math.sin(i / 4) * 2.3) * 10) / 10)
+        }
+      ];
+
+      globalForecastState = { times, models: modelRows, current: currentSummary };
+      renderModelsTable(modelRows);
+      renderForecastDetailChart();
+      generateWhatsAppBriefing(currentSummary, modelRows);
+    }
+
+    function updateSnowCardsUI(summary) {
+      document.getElementById('snowDepthTop').textContent = `${summary.top.depthCm} cm`;
+      document.getElementById('tempTop').textContent = `${summary.top.tempC}°C`;
+      document.getElementById('freshTop').textContent = `24u nieuw: ${summary.top.fresh24} cm · 72u: ${summary.top.fresh72} cm`;
+
+      document.getElementById('snowDepthMid').textContent = `${summary.idalp.depthCm} cm`;
+      document.getElementById('tempMid').textContent = `${summary.idalp.tempC}°C`;
+      document.getElementById('freshMid').textContent = `24u nieuw: ${summary.idalp.fresh24} cm · 72u: ${summary.idalp.fresh72} cm`;
+
+      document.getElementById('snowDepthSamnaun').textContent = `${summary.samnaun.depthCm} cm`;
+      document.getElementById('tempSamnaun').textContent = `${summary.samnaun.tempC}°C`;
+      document.getElementById('freshSamnaun').textContent = `24u nieuw: ${summary.samnaun.fresh24} cm · 72u: ${summary.samnaun.fresh72} cm`;
+
+      document.getElementById('snowDepthIschgl').textContent = `${summary.ischgl.depthCm} cm`;
+      document.getElementById('tempIschgl').textContent = `${summary.ischgl.tempC}°C`;
+      document.getElementById('freshIschgl').textContent = `24u nieuw: ${summary.ischgl.fresh24} cm · 72u: ${summary.ischgl.fresh72} cm`;
+    }
+
+    function renderSnowDepthChart(labels, series) {
+      const ctx = document.getElementById('snowDepthChart').getContext('2d');
+      if (snowDepthChartInstance) snowDepthChartInstance.destroy();
+
+      snowDepthChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            { label: 'Greitspitz (2.872m)', data: series.top, borderColor: '#0f172a', backgroundColor: 'rgba(15, 23, 42, 0.06)', borderWidth: 2.5, tension: 0.3, fill: true },
+            { label: 'Idalp (2.320m)', data: series.idalp, borderColor: '#0284c7', borderWidth: 2, tension: 0.3 },
+            { label: 'Samnaun (1.846m)', data: series.samnaun, borderColor: '#059669', borderWidth: 2, tension: 0.3 },
+            { label: 'Ischgl (1.377m)', data: series.ischgl, borderColor: '#94a3b8', borderDash: [4, 4], borderWidth: 2, tension: 0.3 }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } }
+          },
+          scales: {
+            y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 11 } } },
+            x: { grid: { display: false }, ticks: { font: { size: 11 } } }
+          }
+        }
+      });
+    }
+
+    function renderModelsTable(modelRows) {
+      const tbody = document.getElementById('modelsTableBody');
+      const avg72 = (modelRows.reduce((acc, m) => acc + m.snow72Top, 0) / modelRows.length).toFixed(1);
+      document.getElementById('consensusSnow').textContent = `${avg72} cm`;
+
+      tbody.innerHTML = modelRows.map(m => `
+        <tr class="hover:bg-slate-50/80 transition">
+          <td class="py-3 pr-4 font-semibold text-slate-900 flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full inline-block" style="background:${m.color}"></span>
+            ${m.name}
+          </td>
+          <td class="py-3 px-3 text-xs text-slate-500">${m.res}</td>
+          <td class="py-3 px-3 font-medium">${m.snow24Top} cm</td>
+          <td class="py-3 px-3 font-bold text-sky-700">${m.snow72Top} cm</td>
+          <td class="py-3 px-3 text-xs">${m.snow72Ischgl} cm / ${m.snow72Samnaun} cm</td>
+          <td class="py-3 px-3 text-xs">${m.minTop}°C / ${m.maxTop}°C</td>
+          <td class="py-3 px-3 text-xs">${m.minDal}°C / ${m.maxDal}°C</td>
+          <td class="py-3 pl-3 font-medium">~${m.snowline} m</td>
+        </tr>
+      `).join('');
+    }
+
+    function switchForecastChart(tab) {
+      activeForecastTab = tab;
+      ['snow', 'snowline', 'temp'].forEach(t => {
+        const btn = document.getElementById(`btnChart${t.charAt(0).toUpperCase() + t.slice(1)}`);
+        btn.className = (t === tab)
+          ? 'tab-active text-xs font-medium px-3 py-1.5 rounded-md transition'
+          : 'tab-inactive text-xs font-medium px-3 py-1.5 rounded-md transition';
+      });
+      renderForecastDetailChart();
+    }
+
+    function renderForecastDetailChart() {
+      if (!globalForecastState) return;
+      const ctx = document.getElementById('forecastDetailChart').getContext('2d');
+      if (forecastChartInstance) forecastChartInstance.destroy();
+
+      // Groepeer per 3 uur voor een rustige weergave over 72 uur (24 punten)
+      const labels = [];
+      for (let i = 0; i < 72; i += 3) {
+        const d = new Date(globalForecastState.times[i]);
+        labels.push(`${d.toLocaleDateString('nl-BE', { weekday: 'short' })} ${String(d.getHours()).padStart(2, '0')}u`);
+      }
+
+      let datasets = [];
+      let yTitle = '';
+
+      if (activeForecastTab === 'snow') {
+        yTitle = 'Sneeuwval (cm per 3u)';
+        datasets = globalForecastState.models.map(m => {
+          const grouped = [];
+          for (let i = 0; i < 72; i += 3) {
+            grouped.push(sumSlice(m.hourlySnow, i, i + 3));
+          }
+          return {
+            label: m.name,
+            data: grouped,
+            backgroundColor: m.color,
+            borderRadius: 4
+          };
+        });
+      } else if (activeForecastTab === 'snowline') {
+        yTitle = 'Hoogte (meter)';
+        datasets = globalForecastState.models.map(m => ({
+          label: m.name,
+          data: m.hourlySnowline.filter((_, idx) => idx % 3 === 0),
+          borderColor: m.color,
+          borderWidth: 2,
+          tension: 0.3,
+          pointRadius: 0
+        }));
+        datasets.push({
+          label: 'Ischgl Dorp (1.377m)',
+          data: labels.map(() => 1377),
+          borderColor: '#94a3b8',
+          borderDash: [5, 5],
+          borderWidth: 1.5,
+          pointRadius: 0
+        });
+      } else {
+        yTitle = 'Temperatuur (°C)';
+        const iconModel = globalForecastState.models[0];
+        const ecmwfModel = globalForecastState.models[1];
+        datasets = [
+          {
+            label: 'Greitspitz Top (ICON)',
+            data: iconModel.hourlyTempTop.filter((_, idx) => idx % 3 === 0),
+            borderColor: '#0284c7',
+            borderWidth: 2.5,
+            tension: 0.3
+          },
+          {
+            label: 'Greitspitz Top (ECMWF)',
+            data: ecmwfModel.hourlyTempTop.filter((_, idx) => idx % 3 === 0),
+            borderColor: '#0f172a',
+            borderDash: [4, 4],
+            borderWidth: 2,
+            tension: 0.3
+          },
+          {
+            label: 'Ischgl Vallei (ICON)',
+            data: iconModel.hourlyTempDal.filter((_, idx) => idx % 3 === 0),
+            borderColor: '#ea580c',
+            borderWidth: 2,
+            tension: 0.3
+          }
+        ];
+      }
+
+      forecastChartInstance = new Chart(ctx, {
+        type: activeForecastTab === 'snow' ? 'bar' : 'line',
+        data: { labels, datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } }
+          },
+          scales: {
+            y: {
+              beginAtZero: activeForecastTab === 'snow',
+              grid: { color: '#f1f5f9' },
+              title: { display: true, text: yTitle, font: { size: 11 } },
+              ticks: { font: { size: 11 } }
+            },
+            x: {
+              grid: { display: false },
+              ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 12, font: { size: 11 } }
+            }
+          }
+        }
+      });
+    }
+
+    function generateWhatsAppBriefing(current, models) {
+      const today = new Date().toLocaleDateString('nl-BE', { weekday: 'long', day: 'numeric', month: 'long' });
+      const icon = models[0];
+      const ecmwf = models[1];
+      const arome = models[2];
+
+      const avgSnowline = Math.round((icon.snowline + ecmwf.snowline + arome.snowline) / 3);
+
+      const text =
+`🏔️ *Silvretta Powder Radar — ${today}*
+_Avond-briefing (20:00) voor Mathias & Wouter_
+
+❄️ *Huidig Sneeuwdek*
+• Greitspitz (2.872m): *${current.top.depthCm} cm* (${current.top.tempC}°C)
+• Idalp (2.320m): *${current.idalp.depthCm} cm* (${current.idalp.tempC}°C)
+• Samnaun (1.846m): *${current.samnaun.depthCm} cm* (${current.samnaun.tempC}°C)
+• Ischgl (1.377m): *${current.ischgl.depthCm} cm* (${current.ischgl.tempC}°C)
+
+🌨️ *Verwachte Sneeuwval (Bergtop, 24u / 72u)*
+• DWD ICON: *${icon.snow24Top} cm* / *${icon.snow72Top} cm*
+• ECMWF IFS: *${ecmwf.snow24Top} cm* / *${ecmwf.snow72Top} cm*
+• AROME HD: *${arome.snow24Top} cm* / *${arome.snow72Top} cm*
+
+🌡️ *Temperatuur & Sneeuwgrens (72u)*
+• Berg (2.872m): ${icon.minTop}°C tot ${icon.maxTop}°C
+• Vallei Ischgl (1.377m): ${icon.minDal}°C tot ${icon.maxDal}°C
+• Gemiddelde sneeuwgrens: *~${avgSnowline} m*`;
+
+      document.getElementById('whatsappPreview').value = text;
+      document.getElementById('openWhatsAppLink').href = `https://wa.me/?text=${encodeURIComponent(text)}`;
+    }
+
+    function copyWhatsAppMessage() {
+      const box = document.getElementById('whatsappPreview');
+      box.select();
+      navigator.clipboard.writeText(box.value);
+      const btn = document.getElementById('copyBtn');
+      const orig = btn.textContent;
+      btn.textContent = 'Gekopieerd!';
+      setTimeout(() => { btn.textContent = orig; }, 2000);
+    }
+
+    function copyPythonCode() {
+      const code = document.getElementById('pythonCodeBlock').textContent;
+      navigator.clipboard.writeText(code);
+      alert('Python-script gekopieerd naar klembord!');
+    }
+
+    // Start bij laden
+    window.addEventListener('DOMContentLoaded', loadAllWeatherData);
+  </script>
+</body>
+</html>
