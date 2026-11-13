@@ -4,14 +4,16 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Ischgl Snow — Silvretta Arena</title>
-  <link rel="manifest" href="manifest.json">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    body {
+    html, body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       background-color: #f8fafc;
       color: #0f172a;
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
     }
     .card {
       background: #ffffff;
@@ -31,34 +33,31 @@
       background-color: #e2e8f0;
     }
   </style>
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js');
-      });
-    }
-  </script>
 </head>
-<body class="min-h-screen antialiased">
+<body class="antialiased">
 
-  <!-- Header -->
-  <header class="bg-white border-b border-slate-200 sticky top-0 z-20">
+  <!-- Header met Logo ondersteuning -->
+  <header class="bg-white border-b border-slate-200">
     <div class="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-      <div>
-        <div class="flex items-center gap-2.5">
-          <h1 class="text-xl font-bold tracking-tight text-slate-900">Ischgl Snow</h1>
-<span class="text-xs font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">Silvretta Arena (Idalp &amp; Höllboden)</span>
+      <div class="flex items-center gap-3">
+        <!-- Logo element: laadt automatisch logo.png uit je GitHub repository -->
+        <img src="logo.png" alt="Ischgl Logo" class="w-10 h-10 object-contain rounded-lg bg-slate-50 p-1 border border-slate-200" onerror="this.style.display='none'" />
+        <div>
+          <div class="flex items-center gap-2.5">
+            <h1 class="text-xl font-bold tracking-tight text-slate-900">Ischgl Snow</h1>
+            <span class="text-xs font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">Silvretta Arena (Idalp &amp; Höllboden)</span>
+          </div>
+          <p class="text-xs text-slate-500 mt-0.5">Sneeuwdek, berg- &amp; dalmodellen en dagelijkse 20:00 WhatsApp-briefing</p>
         </div>
-        <p class="text-xs text-slate-500 mt-0.5">Sneeuwdek, berg- &amp; dalmodellen en dagelijkse 20:00 WhatsApp-briefing</p>
       </div>
-      <div class="flex items-center gap-2.5">
+      <div class="flex flex-wrap items-center gap-2">
         <span id="dataStatusBadge" class="text-xs font-medium px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
           Gegevens laden...
         </span>
         <button onclick="loadAllWeatherData()" class="text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 transition">
           Vernieuwen
         </button>
-        <button onclick="toggleModal(true)" class="text-xs font-medium px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white transition">
+        <button onclick="toggleSetupSection()" class="text-xs font-medium px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white transition">
           20:00 WhatsApp Setup
         </button>
       </div>
@@ -66,6 +65,110 @@
   </header>
 
   <main class="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+
+    <!-- Uitklapbare Setup Sectie -->
+    <section id="setupSection" class="card p-5 sm:p-6 hidden border-slate-300 bg-slate-50/70">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-200">
+        <h2 class="text-base font-bold text-slate-900">Automatische 20:00 WhatsApp-kanaal Bot (Ischgl)</h2>
+        <button onclick="toggleSetupSection()" class="text-xs font-medium px-2.5 py-1 rounded-md border border-slate-300 bg-white text-slate-600 hover:text-slate-900">Sluiten</button>
+      </div>
+      <div class="mt-4 space-y-4 text-xs sm:text-sm text-slate-600">
+        <p>
+          Met onderstaand Python-script en een gratis <strong>GitHub Actions</strong> schema ontvang je elke avond om <strong>20:00 uur</strong> automatisch deze update in jullie WhatsApp-kanaal (via <em>Whapi.Cloud</em>) of rechtstreeks op je eigen WhatsApp (via <em>CallMeBot</em>).
+        </p>
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <span class="font-semibold text-slate-800">1. update_ischgl_whatsapp.py</span>
+            <button onclick="copyPythonCode(this)" class="text-xs text-sky-700 hover:underline font-medium">Kopieer script</button>
+          </div>
+          <pre id="pythonCodeBlock" class="p-3.5 rounded-xl bg-slate-900 text-slate-100 text-xs overflow-x-auto leading-relaxed">import os
+import requests
+from datetime import datetime
+
+LOCS = {
+    "ischgl": {"lat": 47.0131, "lon": 10.2914, "elev": 1377},
+    "samnaun": {"lat": 46.9442, "lon": 10.3614, "elev": 1846},
+    "berg": {"lat": 46.9739, "lon": 10.3208, "elev": 2872},
+}
+
+def fetch_forecast():
+    url = "https://api.open-meteo.com/v1/forecast"
+    params = {
+        "latitude": [LOCS["ischgl"]["lat"], LOCS["samnaun"]["lat"], LOCS["berg"]["lat"]],
+        "longitude": [LOCS["ischgl"]["lon"], LOCS["samnaun"]["lon"], LOCS["berg"]["lon"]],
+        "elevation": [1377, 1846, 2872],
+        "current": ["temperature_2m", "snow_depth"],
+        "hourly": ["temperature_2m", "snowfall", "freezing_level_height"],
+        "models": "best_match,icon_seamless,ecmwf_ifs025",
+        "forecast_days": 3,
+        "timezone": "Europe/Vienna"
+    }
+    r = requests.get(url, params=params, timeout=20)
+    r.raise_for_status()
+    return r.json()
+
+def build_message(data):
+    ischgl, samnaun, berg = data[0], data[1], data[2]
+    now_str = datetime.now().strftime("%d/%m/%Y")
+
+    depth_berg = round((berg["current"].get("snow_depth") or 0) * 100)
+    depth_sam = round((samnaun["current"].get("snow_depth") or 0) * 100)
+    depth_isc = round((ischgl["current"].get("snow_depth") or 0) * 100)
+
+    snow_24_berg = round(sum((berg["hourly"].get("snowfall_icon_seamless") or [0])[:24]), 1)
+    snow_72_berg = round(sum((berg["hourly"].get("snowfall_icon_seamless") or [0])[:72]), 1)
+    snow_72_ecmwf = round(sum((berg["hourly"].get("snowfall_ecmwf_ifs025") or [0])[:72]), 1)
+
+    temps_berg = (berg["hourly"].get("temperature_2m_icon_seamless") or [0])[:24]
+    temps_dal = (ischgl["hourly"].get("temperature_2m_icon_seamless") or [0])[:24]
+    flh = (berg["hourly"].get("freezing_level_height_icon_seamless") or [1500])[:24]
+    snowline = max(800, round(sum(flh) / len(flh) - 250))
+
+    return (
+        f"🏔️ *Ischgl Snow — {now_str} (20:00)*\n"
+        f"_Ischgl & Samnaun Update voor Mathias & Wouter_\n\n"
+        f"❄️ *Huidig Sneeuwdek*\n"
+        f"• Greitspitz (2.872m): *{depth_berg} cm* ({berg['current']['temperature_2m']}°C)\n"
+        f"• Samnaun (1.846m): *{depth_sam} cm* ({samnaun['current']['temperature_2m']}°C)\n"
+        f"• Ischgl (1.377m): *{depth_isc} cm* ({ischgl['current']['temperature_2m']}°C)\n\n"
+        f"🌨️ *Verwachte Sneeuwval (Berg)*\n"
+        f"• Komende 24u (ICON): *{snow_24_berg} cm*\n"
+        f"• Komende 72u: *{snow_72_berg} cm* (ICON) / *{snow_72_ecmwf} cm* (ECMWF)\n\n"
+        f"🌡️ *Temperatuur & Sneeuwgrens (24u)*\n"
+        f"• Berg (2.872m): {min(temps_berg):.1f}°C tot {max(temps_berg):.1f}°C\n"
+        f"• Vallei Ischgl (1.377m): {min(temps_dal):.1f}°C tot {max(temps_dal):.1f}°C\n"
+        f"• Gem. sneeuwgrens: *~{snowline} m*"
+    )
+
+def send_whatsapp_channel(msg):
+    whapi_token = os.getenv("WHAPI_TOKEN")
+    channel_id = os.getenv("WHATSAPP_CHANNEL_ID")
+    if whapi_token and channel_id:
+        requests.post(
+            "https://gate.whapi.cloud/messages/text",
+            headers={"Authorization": f"Bearer {whapi_token}"},
+            json={"to": channel_id, "body": msg},
+            timeout=15
+        )
+        return
+
+    phone = os.getenv("CALLMEBOT_PHONE")
+    apikey = os.getenv("CALLMEBOT_APIKEY")
+    if phone and apikey:
+        requests.get(
+            "https://api.callmebot.com/whatsapp.php",
+            params={"phone": phone, "text": msg, "apikey": apikey},
+            timeout=15
+        )
+
+if __name__ == "__main__":
+    forecast = fetch_forecast()
+    message = build_message(forecast)
+    print(message)
+    send_whatsapp_channel(message)</pre>
+        </div>
+      </div>
+    </section>
 
     <!-- Sectie 1: Huidige Sneeuwsituatie -->
     <section class="card p-5 sm:p-6">
@@ -77,7 +180,6 @@
         <span id="lastUpdatedText" class="text-xs text-slate-400">Bijgewerkt: —</span>
       </div>
 
-      <!-- 4 Hoogtekaarten -->
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 mb-6">
         <div class="p-4 rounded-xl bg-slate-50 border border-slate-200/80">
           <div class="flex items-center justify-between">
@@ -128,7 +230,6 @@
         </div>
       </div>
 
-      <!-- Sneeuwdek Grafiek (Afgelopen 7 dagen + 3 dagen vooruit) -->
       <div>
         <div class="flex items-center justify-between mb-2">
           <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-500">Verloop Sneeuwdek (7 dagen historie + 3 dagen verwachting)</h3>
@@ -140,7 +241,7 @@
       </div>
     </section>
 
-    <!-- Sectie 2: Weermodellen Vergelijking (Komende 72 uur) -->
+    <!-- Sectie 2: Weermodellen Vergelijking -->
     <section class="card p-5 sm:p-6">
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
         <div>
@@ -175,23 +276,26 @@
       </div>
     </section>
 
-    <!-- Sectie 3: Interactieve 72-uurs Modelgrafiek -->
+    <!-- Sectie 3: Interactieve 72-uurs Modelgrafiek met losse Model-toggles -->
     <section class="card p-5 sm:p-6">
-      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+      <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-4">
         <div>
           <h2 class="text-base font-semibold text-slate-900">72-uurs Detailverloop per Model</h2>
-          <p class="text-xs text-slate-500">Bekijk de uurlijkse spreiding tussen ICON, ECMWF IFS en Météo-France / AROME</p>
+          <p class="text-xs text-slate-500">Klik op modellen om ze aan/uit te zetten en wissel van type weergave</p>
         </div>
-        <div class="inline-flex rounded-lg p-1 bg-slate-100 gap-1">
-          <button id="btnChartSnow" onclick="switchForecastChart('snow')" class="tab-active text-xs font-medium px-3 py-1.5 rounded-md transition">
-            Sneeuwval (cm/3u)
-          </button>
-          <button id="btnChartSnowline" onclick="switchForecastChart('snowline')" class="tab-inactive text-xs font-medium px-3 py-1.5 rounded-md transition">
-            Sneeuwgrens (m)
-          </button>
-          <button id="btnChartTemp" onclick="switchForecastChart('temp')" class="tab-inactive text-xs font-medium px-3 py-1.5 rounded-md transition">
-            Temp Berg vs. Dal
-          </button>
+        
+        <!-- Model Toggles & Type Tabs -->
+        <div class="flex flex-wrap items-center gap-2">
+          <div class="inline-flex rounded-lg p-1 bg-slate-100 gap-1">
+            <button id="btnModel0" onclick="toggleModelFilter(0)" class="px-2.5 py-1 rounded text-xs font-medium bg-sky-500 text-white transition">ICON</button>
+            <button id="btnModel1" onclick="toggleModelFilter(1)" class="px-2.5 py-1 rounded text-xs font-medium bg-slate-900 text-white transition">ECMWF</button>
+            <button id="btnModel2" onclick="toggleModelFilter(2)" class="px-2.5 py-1 rounded text-xs font-medium bg-emerald-600 text-white transition">AROME</button>
+          </div>
+          <div class="inline-flex rounded-lg p-1 bg-slate-100 gap-1">
+            <button id="btnChartSnow" onclick="switchForecastChart('snow')" class="tab-active text-xs font-medium px-3 py-1.5 rounded-md transition">Sneeuwval</button>
+            <button id="btnChartSnowline" onclick="switchForecastChart('snowline')" class="tab-inactive text-xs font-medium px-3 py-1.5 rounded-md transition">Sneeuwgrens</button>
+            <button id="btnChartTemp" onclick="switchForecastChart('temp')" class="tab-inactive text-xs font-medium px-3 py-1.5 rounded-md transition">Temperatuur</button>
+          </div>
         </div>
       </div>
       <div class="h-72 w-full">
@@ -220,142 +324,7 @@
 
   </main>
 
-  <!-- Modal: Automatische 20:00 WhatsApp & Kanaal Setup -->
-  <div id="setupModal" class="fixed inset-0 bg-slate-900/50 hidden items-center justify-center p-4 z-50">
-    <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-xl border border-slate-200 max-h-[90vh] overflow-y-auto">
-      <div class="flex items-center justify-between pb-3 border-b border-slate-200">
-        <h3 class="text-base font-bold text-slate-900">Automatische 20:00 WhatsApp-kanaal Bot</h3>
-        <button onclick="toggleModal(false)" class="text-slate-400 hover:text-slate-600 text-lg font-bold px-2">&times;</button>
-      </div>
-      <div class="mt-4 space-y-4 text-xs sm:text-sm text-slate-600">
-        <p>
-          Met onderstaand Python-script en een gratis <strong>GitHub Actions</strong> schema ontvang je elke avond om <strong>20:00 uur</strong> automatisch deze update in jullie WhatsApp-kanaal (via <em>Whapi.Cloud</em>) of rechtstreeks op je eigen WhatsApp (via <em>CallMeBot</em>).
-        </p>
-        <div>
-          <div class="flex items-center justify-between mb-1">
-            <span class="font-semibold text-slate-800">1. update_ischgl_whatsapp.py</span>
-            <button onclick="copyPythonCode()" class="text-xs text-sky-700 hover:underline font-medium">Kopieer script</button>
-          </div>
-          <pre id="pythonCodeBlock" class="p-3.5 rounded-xl bg-slate-900 text-slate-100 text-xs overflow-x-auto leading-relaxed">import os
-import requests
-from datetime import datetime
-
-# Coördinaten Silvretta Arena
-LOCS = {
-    "ischgl": {"lat": 47.0131, "lon": 10.2914, "elev": 1377},
-    "samnaun": {"lat": 46.9442, "lon": 10.3614, "elev": 1846},
-    "berg": {"lat": 46.9739, "lon": 10.3208, "elev": 2872},
-}
-
-def fetch_forecast():
-    url = "https://api.open-meteo.com/v1/forecast"
-    params = {
-        "latitude": [LOCS["ischgl"]["lat"], LOCS["samnaun"]["lat"], LOCS["berg"]["lat"]],
-        "longitude": [LOCS["ischgl"]["lon"], LOCS["samnaun"]["lon"], LOCS["berg"]["lon"]],
-        "elevation": [1377, 1846, 2872],
-        "current": ["temperature_2m", "snow_depth"],
-        "hourly": ["temperature_2m", "snowfall", "freezing_level_height"],
-        "models": "best_match,icon_seamless,ecmwf_ifs025",
-        "forecast_days": 3,
-        "timezone": "Europe/Vienna"
-    }
-    r = requests.get(url, params=params, timeout=20)
-    r.raise_for_status()
-    return r.json()
-
-def build_message(data):
-    ischgl, samnaun, berg = data[0], data[1], data[2]
-    now_str = datetime.now().strftime("%d/%m/%Y")
-
-    depth_berg = round((berg["current"].get("snow_depth") or 0) * 100)
-    depth_sam = round((samnaun["current"].get("snow_depth") or 0) * 100)
-    depth_isc = round((ischgl["current"].get("snow_depth") or 0) * 100)
-
-    snow_24_berg = round(sum((berg["hourly"].get("snowfall_icon_seamless") or [0])[:24]), 1)
-    snow_72_berg = round(sum((berg["hourly"].get("snowfall_icon_seamless") or [0])[:72]), 1)
-    snow_72_ecmwf = round(sum((berg["hourly"].get("snowfall_ecmwf_ifs025") or [0])[:72]), 1)
-
-    temps_berg = (berg["hourly"].get("temperature_2m_icon_seamless") or [0])[:24]
-    temps_dal = (ischgl["hourly"].get("temperature_2m_icon_seamless") or [0])[:24]
-    flh = (berg["hourly"].get("freezing_level_height_icon_seamless") or [1500])[:24]
-    snowline = max(800, round(sum(flh) / len(flh) - 250))
-
-    return (
-        f"🏔️ *Silvretta Powder Radar — {now_str} (20:00)*\n"
-        f"_Ischgl & Samnaun Update voor Mathias & Wouter_\n\n"
-        f"❄️ *Huidig Sneeuwdek*\n"
-        f"• Greitspitz (2.872m): *{depth_berg} cm* ({berg['current']['temperature_2m']}°C)\n"
-        f"• Samnaun (1.846m): *{depth_sam} cm* ({samnaun['current']['temperature_2m']}°C)\n"
-        f"• Ischgl (1.377m): *{depth_isc} cm* ({ischgl['current']['temperature_2m']}°C)\n\n"
-        f"🌨️ *Verwachte Sneeuwval (Berg)*\n"
-        f"• Komende 24u (ICON): *{snow_24_berg} cm*\n"
-        f"• Komende 72u: *{snow_72_berg} cm* (ICON) / *{snow_72_ecmwf} cm* (ECMWF)\n\n"
-        f"🌡️ *Temperatuur & Sneeuwgrens (24u)*\n"
-        f"• Berg (2.872m): {min(temps_berg):.1f}°C tot {max(temps_berg):.1f}°C\n"
-        f"• Vallei Ischgl (1.377m): {min(temps_dal):.1f}°C tot {max(temps_dal):.1f}°C\n"
-        f"• Gem. sneeuwgrens: *~{snowline} m*"
-    )
-
-def send_whatsapp_channel(msg):
-    # Optie A: WhatsApp Kanaal via Whapi.Cloud (NL-... @newsletter)
-    whapi_token = os.getenv("WHAPI_TOKEN")
-    channel_id = os.getenv("WHATSAPP_CHANNEL_ID")
-    if whapi_token and channel_id:
-        requests.post(
-            "https://gate.whapi.cloud/messages/text",
-            headers={"Authorization": f"Bearer {whapi_token}"},
-            json={"to": channel_id, "body": msg},
-            timeout=15
-        )
-        return
-
-    # Optie B: Persoonlijk WhatsApp-bericht via CallMeBot
-    phone = os.getenv("CALLMEBOT_PHONE")
-    apikey = os.getenv("CALLMEBOT_APIKEY")
-    if phone and apikey:
-        requests.get(
-            "https://api.callmebot.com/whatsapp.php",
-            params={"phone": phone, "text": msg, "apikey": apikey},
-            timeout=15
-        )
-
-if __name__ == "__main__":
-    forecast = fetch_forecast()
-    message = build_message(forecast)
-    print(message)
-    send_whatsapp_channel(message)</pre>
-        </div>
-
-        <div>
-          <span class="font-semibold text-slate-800 block mb-1">2. GitHub Actions (.github/workflows/snow-update.yml)</span>
-          <pre class="p-3.5 rounded-xl bg-slate-100 text-slate-800 text-xs overflow-x-auto leading-relaxed">name: Silvretta 20:00 WhatsApp Update
-on:
-  schedule:
-    - cron: '0 19 * * *' # 19:00 UTC = 20:00 CET (Brussel/Ischgl)
-  workflow_dispatch:
-
-jobs:
-  send-update:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - run: pip install requests
-      - env:
-          WHAPI_TOKEN: ${{ secrets.WHAPI_TOKEN }}
-          WHATSAPP_CHANNEL_ID: ${{ secrets.WHATSAPP_CHANNEL_ID }}
-          CALLMEBOT_PHONE: ${{ secrets.CALLMEBOT_PHONE }}
-          CALLMEBOT_APIKEY: ${{ secrets.CALLMEBOT_APIKEY }}
-        run: python update_ischgl_whatsapp.py</pre>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <script>
-    // Coördinaten voor Ischgl, Samnaun, Idalp en Greitspitz
     const LOCATIONS = [
       { id: 'ischgl', name: 'Ischgl Dorp', lat: 47.0131, lon: 10.2914, elev: 1377 },
       { id: 'samnaun', name: 'Samnaun Dorp', lat: 46.9442, lon: 10.3614, elev: 1846 },
@@ -367,16 +336,24 @@ jobs:
     let forecastChartInstance = null;
     let activeForecastTab = 'snow';
     let globalForecastState = null;
+    let activeModelToggles = [true, true, true]; // ICON, ECMWF, AROME
 
-    function toggleModal(show) {
-      const modal = document.getElementById('setupModal');
-      if (show) {
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
+    function toggleSetupSection() {
+      const sec = document.getElementById('setupSection');
+      sec.classList.toggle('hidden');
+    }
+
+    function toggleModelFilter(index) {
+      activeModelToggles[index] = !activeModelToggles[index];
+      const btn = document.getElementById(`btnModel${index}`);
+      if (activeModelToggles[index]) {
+        btn.style.opacity = '1';
+        btn.style.filter = 'none';
       } else {
-        modal.classList.add('hidden');
-        modal.classList.remove('flex');
+        btn.style.opacity = '0.35';
+        btn.style.filter = 'grayscale(100%)';
       }
+      renderForecastDetailChart();
     }
 
     function setStatusBadge(isLive) {
@@ -390,6 +367,26 @@ jobs:
       }
     }
 
+    function copyTextSafe(text) {
+      if (navigator.clipboard && window.isSecureContext) {
+        return navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
+      } else {
+        fallbackCopy(text);
+        return Promise.resolve();
+      }
+    }
+
+    function fallbackCopy(text) {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); } catch (e) {}
+      document.body.removeChild(ta);
+    }
+
     async function loadAllWeatherData() {
       const badge = document.getElementById('dataStatusBadge');
       badge.textContent = 'Gegevens laden...';
@@ -400,10 +397,8 @@ jobs:
         const lons = LOCATIONS.map(l => l.lon).join(',');
         const elevs = LOCATIONS.map(l => l.elev).join(',');
 
-        // 1. Huidige sneeuwsituatie + 7 dagen historie + 3 dagen vooruit (standaard best_match)
         const historyUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lons}&elevation=${elevs}&current=temperature_2m,snow_depth&hourly=snow_depth,snowfall&past_days=7&forecast_days=3&timezone=Europe%2FVienna`;
 
-        // 2. Multi-model vergelijking voor Ischgl (index 0), Samnaun (index 1) en Greitspitz Top (index 2)
         const modelLats = `${LOCATIONS[0].lat},${LOCATIONS[1].lat},${LOCATIONS[3].lat}`;
         const modelLons = `${LOCATIONS[0].lon},${LOCATIONS[1].lon},${LOCATIONS[3].lon}`;
         const modelElevs = `${LOCATIONS[0].elev},${LOCATIONS[1].elev},${LOCATIONS[3].elev}`;
@@ -414,9 +409,7 @@ jobs:
           fetch(modelsUrl)
         ]);
 
-        if (!histRes.ok || !modRes.ok) {
-          throw new Error('API response niet OK');
-        }
+        if (!histRes.ok || !modRes.ok) throw new Error('API response niet OK');
 
         const histData = await histRes.json();
         const modData = await modRes.json();
@@ -424,7 +417,6 @@ jobs:
         processLiveData(histData, modData);
         setStatusBadge(true);
       } catch (err) {
-        console.warn('Fout bij ophalen Open-Meteo data, schakel over naar fallback:', err);
         processFallbackData();
         setStatusBadge(false);
       }
@@ -444,7 +436,6 @@ jobs:
     }
 
     function processLiveData(histData, modData) {
-      // Huidige kaarten invullen
       const mapIdx = { ischgl: 0, samnaun: 1, idalp: 2, top: 3 };
       const currentSummary = {};
 
@@ -452,7 +443,6 @@ jobs:
         const locObj = histData[idx];
         const depthCm = Math.round((locObj.current?.snow_depth || 0) * 100);
         const tempC = (locObj.current?.temperature_2m ?? 0).toFixed(1);
-        // past_days=7 -> uur 168 is nu
         const fresh24 = sumSlice(locObj.hourly?.snowfall, 144, 168);
         const fresh72 = sumSlice(locObj.hourly?.snowfall, 96, 168);
 
@@ -461,7 +451,6 @@ jobs:
 
       updateSnowCardsUI(currentSummary);
 
-      // Dagelijkse sneeuwdekreeks (1 waarde per dag om 12:00 over 10 dagen)
       const hourlyTimes = histData[0].hourly.time;
       const dailyLabels = [];
       const depthSeries = { top: [], idalp: [], samnaun: [], ischgl: [] };
@@ -477,7 +466,6 @@ jobs:
 
       renderSnowDepthChart(dailyLabels, depthSeries);
 
-      // Multi-model verwerking (modData: 0 = Ischgl, 1 = Samnaun, 2 = Greitspitz Top)
       const ischglMod = modData[0].hourly;
       const samnaunMod = modData[1].hourly;
       const topMod = modData[2].hourly;
@@ -521,12 +509,7 @@ jobs:
         };
       });
 
-      globalForecastState = {
-        times: topMod.time,
-        models: modelRows,
-        current: currentSummary
-      };
-
+      globalForecastState = { times: topMod.time, models: modelRows, current: currentSummary };
       renderModelsTable(modelRows);
       renderForecastDetailChart();
       generateWhatsAppBriefing(currentSummary, modelRows);
@@ -560,7 +543,6 @@ jobs:
         dt.setHours(dt.getHours() + h, 0, 0, 0);
         times.push(dt.toISOString());
       }
-
       const makeWave = (base, amp) => times.map((_, i) => Math.max(0, Math.round((base + Math.sin(i / 5) * amp) * 10) / 10));
 
       const modelRows = [
@@ -685,7 +667,6 @@ jobs:
       const ctx = document.getElementById('forecastDetailChart').getContext('2d');
       if (forecastChartInstance) forecastChartInstance.destroy();
 
-      // Groepeer per 3 uur voor een rustige weergave over 72 uur (24 punten)
       const labels = [];
       for (let i = 0; i < 72; i += 3) {
         const d = new Date(globalForecastState.times[i]);
@@ -697,28 +678,31 @@ jobs:
 
       if (activeForecastTab === 'snow') {
         yTitle = 'Sneeuwval (cm per 3u)';
-        datasets = globalForecastState.models.map(m => {
-          const grouped = [];
-          for (let i = 0; i < 72; i += 3) {
-            grouped.push(sumSlice(m.hourlySnow, i, i + 3));
-          }
-          return {
-            label: m.name,
-            data: grouped,
-            backgroundColor: m.color,
-            borderRadius: 4
-          };
-        });
+        datasets = globalForecastState.models
+          .map((m, idx) => {
+            if (!activeModelToggles[idx]) return null;
+            const grouped = [];
+            for (let i = 0; i < 72; i += 3) {
+              grouped.push(sumSlice(m.hourlySnow, i, i + 3));
+            }
+            return { label: m.name, data: grouped, backgroundColor: m.color, borderRadius: 4 };
+          })
+          .filter(Boolean);
       } else if (activeForecastTab === 'snowline') {
         yTitle = 'Hoogte (meter)';
-        datasets = globalForecastState.models.map(m => ({
-          label: m.name,
-          data: m.hourlySnowline.filter((_, idx) => idx % 3 === 0),
-          borderColor: m.color,
-          borderWidth: 2,
-          tension: 0.3,
-          pointRadius: 0
-        }));
+        datasets = globalForecastState.models
+          .map((m, idx) => {
+            if (!activeModelToggles[idx]) return null;
+            return {
+              label: m.name,
+              data: m.hourlySnowline.filter((_, i) => i % 3 === 0),
+              borderColor: m.color,
+              borderWidth: 2,
+              tension: 0.3,
+              pointRadius: 0
+            };
+          })
+          .filter(Boolean);
         datasets.push({
           label: 'Ischgl Dorp (1.377m)',
           data: labels.map(() => 1377),
@@ -731,30 +715,14 @@ jobs:
         yTitle = 'Temperatuur (°C)';
         const iconModel = globalForecastState.models[0];
         const ecmwfModel = globalForecastState.models[1];
-        datasets = [
-          {
-            label: 'Greitspitz Top (ICON)',
-            data: iconModel.hourlyTempTop.filter((_, idx) => idx % 3 === 0),
-            borderColor: '#0284c7',
-            borderWidth: 2.5,
-            tension: 0.3
-          },
-          {
-            label: 'Greitspitz Top (ECMWF)',
-            data: ecmwfModel.hourlyTempTop.filter((_, idx) => idx % 3 === 0),
-            borderColor: '#0f172a',
-            borderDash: [4, 4],
-            borderWidth: 2,
-            tension: 0.3
-          },
-          {
-            label: 'Ischgl Vallei (ICON)',
-            data: iconModel.hourlyTempDal.filter((_, idx) => idx % 3 === 0),
-            borderColor: '#ea580c',
-            borderWidth: 2,
-            tension: 0.3
-          }
-        ];
+        
+        if (activeModelToggles[0]) {
+          datasets.push({ label: 'Greitspitz Top (ICON)', data: iconModel.hourlyTempTop.filter((_, i) => i % 3 === 0), borderColor: '#0284c7', borderWidth: 2.5, tension: 0.3 });
+          datasets.push({ label: 'Ischgl Vallei (ICON)', data: iconModel.hourlyTempDal.filter((_, i) => i % 3 === 0), borderColor: '#ea580c', borderWidth: 2, tension: 0.3 });
+        }
+        if (activeModelToggles[1]) {
+          datasets.push({ label: 'Greitspitz Top (ECMWF)', data: ecmwfModel.hourlyTempTop.filter((_, i) => i % 3 === 0), borderColor: '#0f172a', borderDash: [4, 4], borderWidth: 2, tension: 0.3 });
+        }
       }
 
       forecastChartInstance = new Chart(ctx, {
@@ -764,20 +732,10 @@ jobs:
           responsive: true,
           maintainAspectRatio: false,
           interaction: { mode: 'index', intersect: false },
-          plugins: {
-            legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } }
-          },
+          plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } },
           scales: {
-            y: {
-              beginAtZero: activeForecastTab === 'snow',
-              grid: { color: '#f1f5f9' },
-              title: { display: true, text: yTitle, font: { size: 11 } },
-              ticks: { font: { size: 11 } }
-            },
-            x: {
-              grid: { display: false },
-              ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 12, font: { size: 11 } }
-            }
+            y: { beginAtZero: activeForecastTab === 'snow', grid: { color: '#f1f5f9' }, title: { display: true, text: yTitle, font: { size: 11 } }, ticks: { font: { size: 11 } } },
+            x: { grid: { display: false }, ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 12, font: { size: 11 } } }
           }
         }
       });
@@ -788,11 +746,10 @@ jobs:
       const icon = models[0];
       const ecmwf = models[1];
       const arome = models[2];
-
       const avgSnowline = Math.round((icon.snowline + ecmwf.snowline + arome.snowline) / 3);
 
       const text =
-`🏔️ *Silvretta Powder Radar — ${today}*
+`🏔️ *Ischgl Snow — ${today}*
 _Avond-briefing (20:00) voor Mathias & Wouter_
 
 ❄️ *Huidig Sneeuwdek*
@@ -809,7 +766,7 @@ _Avond-briefing (20:00) voor Mathias & Wouter_
 🌡️ *Temperatuur & Sneeuwgrens (72u)*
 • Berg (2.872m): ${icon.minTop}°C tot ${icon.maxTop}°C
 • Vallei Ischgl (1.377m): ${icon.minDal}°C tot ${icon.maxDal}°C
-• Gemiddelde sneeuwgrens: *~${avgSnowline} m*`;
+• Gemiddelde sneeuwgrens: *~{avgSnowline} m*`;
 
       document.getElementById('whatsappPreview').value = text;
       document.getElementById('openWhatsAppLink').href = `https://wa.me/?text=${encodeURIComponent(text)}`;
@@ -817,21 +774,21 @@ _Avond-briefing (20:00) voor Mathias & Wouter_
 
     function copyWhatsAppMessage() {
       const box = document.getElementById('whatsappPreview');
-      box.select();
-      navigator.clipboard.writeText(box.value);
+      copyTextSafe(box.value);
       const btn = document.getElementById('copyBtn');
       const orig = btn.textContent;
       btn.textContent = 'Gekopieerd!';
       setTimeout(() => { btn.textContent = orig; }, 2000);
     }
 
-    function copyPythonCode() {
+    function copyPythonCode(btn) {
       const code = document.getElementById('pythonCodeBlock').textContent;
-      navigator.clipboard.writeText(code);
-      alert('Python-script gekopieerd naar klembord!');
+      copyTextSafe(code);
+      const orig = btn.textContent;
+      btn.textContent = 'Gekopieerd!';
+      setTimeout(() => { btn.textContent = orig; }, 2000);
     }
 
-    // Start bij laden
     window.addEventListener('DOMContentLoaded', loadAllWeatherData);
   </script>
 </body>
